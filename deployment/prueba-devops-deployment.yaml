@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prueba-devops-hpa
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: prueba-devops
+  template:
+    metadata:
+      labels:
+        app: prueba-devops
+    spec:
+      containers:
+      - name: prueba-devops
+        image: hsaenz11/prueba-devops-neo 
+        env:
+        - name: HOST
+          value: localhost 
+        - name: JWT
+          value: 2f5ae96c-b558-4c7b-a590-a501ae1c3f6c
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prueba-devops
+spec:
+  type: ClusterIP 
+  selector:
+    app: prueba-devops
+  ports:
+  - port: 80
+    targetPort: 5000
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: prueba-devops-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: prueba-devops
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 70
+
+

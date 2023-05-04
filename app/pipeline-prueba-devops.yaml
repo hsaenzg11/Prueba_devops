@@ -1,0 +1,90 @@
+def agentLabel
+switch(BRANCH_NAME) {
+  case "master":
+    agentLabel = "production"
+    break
+  case "staging":
+    agentLabel = "staging"
+    break
+  default:
+    agentLabel = "development"
+    break
+}
+
+pipeline {
+  agent {
+    label {
+      label agentLabel
+    }
+  }
+  stages {
+    stage('Set Environment Variables') {
+      steps {
+        script {
+          echo "JOB_NAME = ${JOB_NAME}"
+          echo "BUILD_NUMBER = ${BUILD_NUMBER}"
+          echo "BUILD_URL = ${BUILD_URL}"
+          echo "GIT_URL = ${GIT_URL}"
+          echo "BRANCH_NAME = ${BRANCH_NAME}"
+
+          switch(BRANCH_NAME) {
+            case "master":
+              env.CLUSTER_NAME = 'production'
+              env.DOCKER_TAG = "prod"
+              break
+            case "staging":
+              env.CLUSTER_NAME = 'staging'
+              env.DOCKER_TAG = "stg"
+              break
+            default:
+              env.CLUSTER_NAME = 'development'
+              env.DOCKER_TAG = "dev"
+              break
+          }
+
+          env.NAMESPACE = "default"
+          env.DOCKER_IMAGE_NAME = "prueba-devops"
+
+          //Print environment variables
+          echo "DOCKER_TAG = ${DOCKER_TAG}"
+          echo "CLUSTER_NAME = ${CLUSTER_NAME}"
+          echo "NAMESPACE = ${NAMESPACE}"
+          echo "DOCKER_IMAGE_NAME = ${DOCKER_IMAGE_NAME}"
+        }
+      }
+    }
+    stage('Build') {
+      steps {
+        sh 'docker login'
+        sh 'docker build -t prueba-devops .'
+        sh("docker push hsaenz11/${DOCKER_IMAGE_NAME}:${DOCKER_TAG}-${BUILD_NUMBER}")
+      }
+    }
+    
+    stage('Test') {
+      steps {
+        sh 'docker run prueba-pytest python -m pytest'
+      }
+    }
+    
+    stage('Deploy') {
+      when {
+        branch 'master'
+        branch 'staging'
+        branch 'development'
+      }
+      steps {
+        sh 'docker login'
+        sh 'docker tag hsaenz11/${DOCKER_IMAGE_NAME}:${DOCKER_TAG} hsaenz11/${DOCKER_IMAGE_NAME}'
+        sh 'docker push hsaenz11/${DOCKER_IMAGE_NAME}'
+        sh("kubectl set image --record deployment/${DOCKER_IMAGE_NAME} ${DOCKER_IMAGE_NAME}=hsaenz11/${DOCKER_IMAGE_NAME}:${DOCKER_TAG}-${BUILD_NUMBER} --namespace ${NAMESPACE}")
+      }
+    }
+  }
+  post {
+        always {
+            sh 'docker image prune -f'
+        }
+    }
+}
+
