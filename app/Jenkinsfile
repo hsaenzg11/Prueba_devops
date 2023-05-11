@@ -1,4 +1,15 @@
-
+def agentLabel
+switch(BRANCH_NAME) {
+  case "master":
+    agentLabel = "production"
+    break
+  case "staging":
+    agentLabel = "staging"
+    break
+  default:
+    agentLabel = "development"
+    break
+}
 
 pipeline {
   agent {
