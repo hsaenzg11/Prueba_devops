@@ -43,7 +43,7 @@ pipeline {
           }
 
           env.NAMESPACE = "default"
-          env.DOCKER_IMAGE_NAME = "prueba-devops"
+          env.DOCKER_IMAGE_NAME = "prueba-devops-neo"
 
           //Print environment variables
           echo "DOCKER_TAG = ${DOCKER_TAG}"
